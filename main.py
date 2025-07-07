@@ -1,12 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
+from typing import Optional
 import torch
 import torch.nn as nn
 from functools import lru_cache
 
-app = FastAPI()
+app = FastAPI(title="ML Model API", version="2.1 Secure")
 
-# Model class
+# --- API Key (you can store this securely via environment variables in production) ---
+API_KEY = "mysecretkey"
+
+def verify_api_key(authorization: Optional[str] = Header(None)):
+    if authorization != f"Bearer {API_KEY}":
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+
+# --- Define model class ---
 class MultiInputModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -19,6 +27,7 @@ class MultiInputModel(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+# --- Load model ---
 @lru_cache()
 def load_model():
     model = MultiInputModel()
@@ -28,6 +37,7 @@ def load_model():
 
 model = load_model()
 
+# --- Request/Response schemas ---
 class InferenceRequest(BaseModel):
     x: float
     z: float
@@ -35,7 +45,8 @@ class InferenceRequest(BaseModel):
 class InferenceResponse(BaseModel):
     prediction: float
 
-@app.post("/predict", response_model=InferenceResponse)
+# --- Secured Inference Endpoint ---
+@app.post("/predict", response_model=InferenceResponse, dependencies=[Depends(verify_api_key)])
 def predict(req: InferenceRequest):
     try:
         input_tensor = torch.tensor([[req.x, req.z]], dtype=torch.float32)
@@ -43,8 +54,3 @@ def predict(req: InferenceRequest):
         return {"prediction": float(pred.item())}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# For local running
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
