@@ -8,7 +8,7 @@ from functools import lru_cache
 app = FastAPI(title="ML Model API", version="2.3 - Swagger Friendly")
 
 # --- API Key ---
-API_KEY = "mysecretkey"
+API_KEY = "obala99"
 
 # --- Model definition ---
 class MultiInputModel(nn.Module):
