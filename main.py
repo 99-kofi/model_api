@@ -1,21 +1,21 @@
-from fastapi import FastAPI, HTTPException, Header, Depends, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional
 import torch
 import torch.nn as nn
 from functools import lru_cache
 
-app = FastAPI(title="ML Model API", version="2.1 Secure")
+app = FastAPI(title="ML Model API", version="2.2 - Easy Key")
 
-# --- API Key (debug mode) ---
+# --- API Key (can now come from query param) ---
 API_KEY = "mysecretkey"
 
-def verify_api_key(authorization: Optional[str] = Header(None)):
-    if authorization != f"Bearer {API_KEY}":
-        print("DEBUG: Received header:", authorization)  # DEBUG LINE
+def verify_api_key(request: Request):
+    key = request.query_params.get("key")
+    if key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
-# --- Define model class ---
+# --- Model definition ---
 class MultiInputModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -46,7 +46,7 @@ class InferenceRequest(BaseModel):
 class InferenceResponse(BaseModel):
     prediction: float
 
-# --- Secured Inference Endpoint with Debug ---
+# --- Secured Inference Endpoint (via query param now) ---
 @app.post("/predict", response_model=InferenceResponse, dependencies=[Depends(verify_api_key)])
 def predict(req: InferenceRequest):
     try:
