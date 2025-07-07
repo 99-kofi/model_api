@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 import torch
@@ -7,11 +7,12 @@ from functools import lru_cache
 
 app = FastAPI(title="ML Model API", version="2.1 Secure")
 
-# --- API Key (you can store this securely via environment variables in production) ---
+# --- API Key (debug mode) ---
 API_KEY = "mysecretkey"
 
 def verify_api_key(authorization: Optional[str] = Header(None)):
     if authorization != f"Bearer {API_KEY}":
+        print("DEBUG: Received header:", authorization)  # DEBUG LINE
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
 # --- Define model class ---
@@ -45,7 +46,7 @@ class InferenceRequest(BaseModel):
 class InferenceResponse(BaseModel):
     prediction: float
 
-# --- Secured Inference Endpoint ---
+# --- Secured Inference Endpoint with Debug ---
 @app.post("/predict", response_model=InferenceResponse, dependencies=[Depends(verify_api_key)])
 def predict(req: InferenceRequest):
     try:
